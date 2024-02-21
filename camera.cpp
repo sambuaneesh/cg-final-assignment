@@ -2,10 +2,10 @@
 
 Camera::Camera(Vector3f from, Vector3f to, Vector3f up, float fieldOfView, Vector2i imageResolution)
     : from(from),
-    to(to),
-    up(up),
-    fieldOfView(fieldOfView),
-    imageResolution(imageResolution)
+      to(to),
+      up(up),
+      fieldOfView(fieldOfView),
+      imageResolution(imageResolution)
 {
     this->aspect = imageResolution.x / float(imageResolution.y);
 
@@ -31,11 +31,12 @@ Camera::Camera(Vector3f from, Vector3f to, Vector3f up, float fieldOfView, Vecto
     this->upperLeft = from - this->w * this->focusDistance - viewportU / 2.f - viewportV / 2.f;
 }
 
-Ray Camera::generateRay(int x, int y) {
-    Vector3f pixelCenter = this->upperLeft + 0.5f * (this->pixelDeltaU + this->pixelDeltaV);
-    pixelCenter = pixelCenter + x * this->pixelDeltaU + y * this->pixelDeltaV;
+Ray Camera::generateRay(int x, int y, float rand)
+{
+    Vector3f pixelPosition = this->upperLeft + rand * (this->pixelDeltaU + this->pixelDeltaV);
+    pixelPosition = pixelPosition + x * this->pixelDeltaU + y * this->pixelDeltaV;
 
-    Vector3f direction = Normalize(pixelCenter - this->from);
+    Vector3f direction = Normalize(pixelPosition - this->from);
 
     return Ray(this->from, direction);
 }
