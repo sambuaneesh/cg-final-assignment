@@ -56,10 +56,27 @@ Interaction Light::intersectLight(Ray *ray)
     Interaction si;
     memset(&si, 0, sizeof(si));
 
-    if (type == LightType::AREA_LIGHT)
+    // check if the ray intersects with the area light
+    if (type == LightType::AREA_LIGHT) // check if the ray intersects with the area light rectangle
     {
-        // TODO: Implement this
-    }
+        float t = Dot((center - ray->o), normal) / Dot(ray->d, normal);
+        if (t > 0)
+        {
+            Vector3f p = ray->o + t * ray->d;
+            Vector3f d = p - center;
 
+            if (AbsDot(d, vx) / vx.Length() <= vx.Length() && AbsDot(d, vy) / vy.Length() <= vy.Length())
+            {
+                si.p = p;
+                si.n = normal;
+                si.t = t;
+                si.didIntersect = true;
+                si.emissiveColor = this->radiance;
+                return si;
+            }
+        }
+    }
+    si.t = 1e30f;
+    si.didIntersect = false;
     return si;
 }

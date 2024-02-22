@@ -37,6 +37,11 @@ long long Integrator::render(int numSamples)
                         if (!siShadow.didIntersect || siShadow.t > ls.d)
                         {
                             color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
+                            Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                            if (siEmitter.didIntersect)
+                            {
+                                color += siEmitter.emissiveColor;
+                            }
                         }
                     }
                     result += color;
