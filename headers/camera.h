@@ -18,5 +18,5 @@ struct Camera
     Camera(){};
     Camera(Vector3f from, Vector3f to, Vector3f up, float fieldOfView, Vector2i imageResolution);
 
-    Ray generateRay(int x, int y, float rand);
+    Ray generateRay(int x, int y, float rand1, float rand2);
 };

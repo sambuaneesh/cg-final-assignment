@@ -7,7 +7,7 @@ Integrator::Integrator(Scene &scene)
     this->outputImage.allocate(TextureType::UNSIGNED_INTEGER_ALPHA, this->scene.imageResolution);
 }
 
-long long Integrator::render(int numSamples)
+long long Integrator::render(int spp)
 {
     auto startTime = std::chrono::high_resolution_clock::now();
     for (int x = 0; x < this->scene.imageResolution.x; x++)
@@ -15,11 +15,9 @@ long long Integrator::render(int numSamples)
         for (int y = 0; y < this->scene.imageResolution.y; y++)
         {
             Vector3f result(0, 0, 0);
-            for (int i = 0; i < numSamples; i++)
+            for (int i = 0; i < spp; i++)
             {
-                float rand = next_float();
-
-                Ray cameraRay = this->scene.camera.generateRay(x, y, rand);
+                Ray cameraRay = this->scene.camera.generateRay(x, y, next_float(), next_float());
                 Interaction si = this->scene.rayIntersect(cameraRay);
 
                 if (si.didIntersect)
@@ -48,7 +46,7 @@ long long Integrator::render(int numSamples)
                 }
             }
 
-            result /= numSamples;
+            result /= spp;
             this->outputImage.writePixelColor(result, x, y);
         }
     }
