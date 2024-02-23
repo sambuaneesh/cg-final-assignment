@@ -53,25 +53,12 @@ public:
      */
     Interaction intersectLight(Ray *ray);
 
-    // get light type
-    LightType getType()
+    bool isAreaLight(Ray shadowRay)
     {
-        return type;
+        return (type == AREA_LIGHT && Dot(normal, -1 * shadowRay.d) > 0);
     }
 
-    // get vx
-    Vector3f getVx()
-    {
-        return vx;
-    }
-
-    // get vy
-    Vector3f getVy()
-    {
-        return vy;
-    }
-
-    Vector3f center, vx, vy, normal;
+    Vector3f normal;
 
 private:
     LightType type;
@@ -83,6 +70,7 @@ private:
     Vector3f direction;
 
     // Applicable only for area lights
+    Vector3f center, vx, vy;
 
     // Radiance of the emitter
     Vector3f radiance;

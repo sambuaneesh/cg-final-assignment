@@ -7,7 +7,7 @@ Integrator::Integrator(Scene &scene)
     this->outputImage.allocate(TextureType::UNSIGNED_INTEGER_ALPHA, this->scene.imageResolution);
 }
 
-long long Integrator::render(int spp)
+long long Integrator::render(int spp, int samplingStrategy)
 {
     auto startTime = std::chrono::high_resolution_clock::now();
     for (int x = 0; x < this->scene.imageResolution.x; x++)
@@ -17,9 +17,7 @@ long long Integrator::render(int spp)
             Vector3f result(0, 0, 0);
             for (int i = 0; i < spp; i++)
             {
-                float rand = next_float();
-
-                Ray cameraRay = this->scene.camera.generateRay(x, y, rand);
+                Ray cameraRay = this->scene.camera.generateRay(x, y, next_float(), next_float());
                 Interaction si = this->scene.rayIntersect(cameraRay);
 
                 if (si.didIntersect)
@@ -29,56 +27,42 @@ long long Integrator::render(int spp)
                     LightSample ls;
                     for (Light &light : this->scene.lights)
                     {
+                        std::tie(radiance, ls) = light.sample(&si);
+                        Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
+                        Interaction siShadow = this->scene.rayIntersect(shadowRay);
 
-                        for (int i = 0; i < NUM_SAMPLES; i++)
+                        if (!siShadow.didIntersect || siShadow.t > ls.d)
                         {
-                            std::tie(radiance, ls) = light.sample(&si);
-                            Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
-                            Interaction siShadow = this->scene.rayIntersect(shadowRay);
-                            if (!siShadow.didIntersect || siShadow.t > ls.d)
+                            if (light.isAreaLight(shadowRay))
                             {
-                                if (light.getType() == AREA_LIGHT)
-                                {
-                                    if (Dot(light.normal, -1 * shadowRay.d) < 0)
-                                    {
-                                        int x = 0;
-                                    }
-                                    else
-                                    {
+                                color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * AbsDot(si.n, ls.wo);
+                            }
 
-                                        auto cos_theta_l = Dot(Normalize(light.normal), Normalize(siShadow.n));
-                                        auto area = 4 * light.getVx().Length() * light.getVy().Length();
-                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo)) * cos_theta_l * area;
-                                    }
-                                }
-
-                                Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
-                                if (siEmitter.didIntersect)
-                                {
-                                    color += siEmitter.emissiveColor;
-                                }
+                            Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                            if (siEmitter.didIntersect)
+                            {
+                                color += siEmitter.emissiveColor;
                             }
                         }
 
-                        // std::tie(radiance, ls) = light.sample(&si);
+                        //     std::tie(radiance, ls) = light.sample(&si);
 
-                        // Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
-                        // Interaction siShadow = this->scene.rayIntersect(shadowRay);
+                        //     Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
+                        //     Interaction siShadow = this->scene.rayIntersect(shadowRay);
 
-                        // if (!siShadow.didIntersect || siShadow.t > ls.d)
-                        // {
-                        //     color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
-                        //     Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
-                        //     if (siEmitter.didIntersect)
+                        //     if ((!siShadow.didIntersect || siShadow.t > ls.d) && Dot(light.normal, -1 * shadowRay.d) > 0)
                         //     {
-                        //         color += siEmitter.emissiveColor;
+                        //         color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
+                        //         Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                        //         if (siEmitter.didIntersect)
+                        //         {
+                        //             color += siEmitter.emissiveColor;
+                        //         }
                         //     }
-                        // }
                     }
                     result += color;
                 }
             }
-            result /= NUM_SAMPLES;
             result /= spp;
             this->outputImage.writePixelColor(result, x, y);
         }
@@ -99,7 +83,8 @@ int main(int argc, char **argv)
 
     Integrator rayTracer(scene);
     int spp = atoi(argv[3]);
-    auto renderTime = rayTracer.render(spp);
+    int samplingStrategy = atoi(argv[4]);
+    auto renderTime = rayTracer.render(spp, samplingStrategy);
 
     std::cout << "Render Time: " << std::to_string(renderTime / 1000.f) << " ms" << std::endl;
     rayTracer.outputImage.save(argv[2]);

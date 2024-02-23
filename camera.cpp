@@ -31,9 +31,9 @@ Camera::Camera(Vector3f from, Vector3f to, Vector3f up, float fieldOfView, Vecto
     this->upperLeft = from - this->w * this->focusDistance - viewportU / 2.f - viewportV / 2.f;
 }
 
-Ray Camera::generateRay(int x, int y, float rand)
+Ray Camera::generateRay(int x, int y, float rand1, float rand2)
 {
-    Vector3f pixelPosition = this->upperLeft + rand * (this->pixelDeltaU + this->pixelDeltaV);
+    Vector3f pixelPosition = this->upperLeft + rand1 * (this->pixelDeltaU) + rand2 * (this->pixelDeltaV);
     pixelPosition = pixelPosition + x * this->pixelDeltaU + y * this->pixelDeltaV;
 
     Vector3f direction = Normalize(pixelPosition - this->from);
