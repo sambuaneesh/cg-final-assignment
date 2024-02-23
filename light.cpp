@@ -45,17 +45,36 @@ std::pair<Vector3f, LightSample> Light::sample(Interaction *si)
         radiance = this->radiance;
         break;
     case LightType::AREA_LIGHT:
-        // TODO: Implement this
-        Vector3f p = center + (2 * next_float() - 1) * vx + (2 * next_float() - 1) * vy;
-        ls.wo = Normalize(p - si->p);
-        radiance = this->radiance / (si->p - p).LengthSquared();
-        ls.d = (si->p - p).Length();
+        if (si->samplingStrategy == 1)
+        {
+            float u1 = next_float();
+            float u2 = next_float();
 
-        auto cos_theta_l = AbsDot(Normalize(normal), ls.wo);
-        auto area = 4 * vx.Length() * vy.Length();
-        radiance *= cos_theta_l;
-        radiance *= area;
-        break;
+            float r = std::sqrt(1 - u1 * u1);
+            float phi = 2 * M_PI * u2;
+
+            float x = r * std::cos(phi);
+            float y = r * std::sin(phi);
+            float z = u1;
+
+            ls.wo = Vector3f(x, y, z);
+            ls.d = 1e10;
+            radiance = this->radiance * M_PI * 2;
+        }
+        else
+        {
+
+            Vector3f p = center + (2 * next_float() - 1) * vx + (2 * next_float() - 1) * vy;
+            ls.wo = Normalize(p - si->p);
+            radiance = this->radiance / (si->p - p).LengthSquared();
+            ls.d = (si->p - p).Length();
+
+            auto cos_theta_l = AbsDot(Normalize(normal), ls.wo);
+            auto area = 4 * vx.Length() * vy.Length();
+            radiance *= cos_theta_l;
+            radiance *= area;
+            break;
+        }
     }
     return {radiance, ls};
 }

@@ -20,47 +20,86 @@ long long Integrator::render(int spp, int samplingStrategy)
                 Ray cameraRay = this->scene.camera.generateRay(x, y, next_float(), next_float());
                 Interaction si = this->scene.rayIntersect(cameraRay);
 
-                if (si.didIntersect)
+                switch (samplingStrategy)
                 {
-                    Vector3f color = Vector3f(0, 0, 0);
-                    Vector3f radiance;
-                    LightSample ls;
-                    for (Light &light : this->scene.lights)
+                case 2:
+                    if (si.didIntersect)
                     {
-                        std::tie(radiance, ls) = light.sample(&si);
-                        Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
-                        Interaction siShadow = this->scene.rayIntersect(shadowRay);
-
-                        if (!siShadow.didIntersect || siShadow.t > ls.d)
+                        Vector3f color = Vector3f(0, 0, 0);
+                        Vector3f radiance;
+                        LightSample ls;
+                        for (Light &light : this->scene.lights)
                         {
-                            if (light.isAreaLight(shadowRay))
-                            {
-                                color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * AbsDot(si.n, ls.wo);
-                            }
+                            std::tie(radiance, ls) = light.sample(&si);
+                            Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
+                            Interaction siShadow = this->scene.rayIntersect(shadowRay);
 
+                            if (!siShadow.didIntersect || siShadow.t > ls.d)
+                            {
+                                if (light.isAreaLight(shadowRay))
+                                {
+                                    color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * AbsDot(si.n, ls.wo);
+                                }
+
+                                Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                                if (siEmitter.didIntersect)
+                                {
+                                    color += siEmitter.emissiveColor;
+                                }
+                            }
+                        }
+                        result += color;
+                    }
+                    break;
+
+                case 1:
+                    if (si.didIntersect)
+                    {
+                        Vector3f color = Vector3f(0, 0, 0);
+                        Vector3f radiance;
+                        LightSample ls;
+                        for (Light &light : this->scene.lights)
+                        {
+                            si.samplingStrategy = 1;
+                            std::tie(radiance, ls) = light.sample(&si);
+                            Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
+                            Interaction siShadow = this->scene.rayIntersect(shadowRay);
+
+                            Ray lightRay(si.p + 1e-3f * si.n, (ls.wo));
+                            Interaction siLight = this->scene.rayEmitterIntersect(lightRay);
+
+                            // if (!siShadow.didIntersect || siShadow.t > ls.d)
+                            // {
+                            //     if (light.isAreaLight(shadowRay))
+                            //     {
+                            //         result += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo)));
+                            //     }
+
+                            //     if (siLight.didIntersect)
+                            //     {
+                            //         color += siLight.emissiveColor;
+                            //     }
+                            // }
+                            if (siLight.didIntersect)
+                            {
+                                if (!siShadow.didIntersect || siShadow.t > siLight.t)
+                                {
+                                    if (Dot(ls.p, si.n) <= 0)
+                                    {
+                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo)));
+                                    }
+                                }
+                            }
                             Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
                             if (siEmitter.didIntersect)
                             {
                                 color += siEmitter.emissiveColor;
                             }
                         }
-
-                        //     std::tie(radiance, ls) = light.sample(&si);
-
-                        //     Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
-                        //     Interaction siShadow = this->scene.rayIntersect(shadowRay);
-
-                        //     if ((!siShadow.didIntersect || siShadow.t > ls.d) && Dot(light.normal, -1 * shadowRay.d) > 0)
-                        //     {
-                        //         color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
-                        //         Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
-                        //         if (siEmitter.didIntersect)
-                        //         {
-                        //             color += siEmitter.emissiveColor;
-                        //         }
-                        //     }
+                        result += color;
                     }
-                    result += color;
+                default:
+                    break;
                 }
             }
             result /= spp;
