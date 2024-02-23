@@ -86,7 +86,7 @@ long long Integrator::render(int spp, int samplingStrategy)
                                 {
                                     if (Dot(ls.p, si.n) <= 0)
                                     {
-                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo)));
+                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo))) / this->scene.lights.size();
                                     }
                                 }
                             }
