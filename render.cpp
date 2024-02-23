@@ -7,7 +7,7 @@ Integrator::Integrator(Scene &scene)
     this->outputImage.allocate(TextureType::UNSIGNED_INTEGER_ALPHA, this->scene.imageResolution);
 }
 
-long long Integrator::render(int numSamples)
+long long Integrator::render(int spp)
 {
     auto startTime = std::chrono::high_resolution_clock::now();
     for (int x = 0; x < this->scene.imageResolution.x; x++)
@@ -15,7 +15,7 @@ long long Integrator::render(int numSamples)
         for (int y = 0; y < this->scene.imageResolution.y; y++)
         {
             Vector3f result(0, 0, 0);
-            for (int i = 0; i < numSamples; i++)
+            for (int i = 0; i < spp; i++)
             {
                 float rand = next_float();
 
@@ -29,26 +29,57 @@ long long Integrator::render(int numSamples)
                     LightSample ls;
                     for (Light &light : this->scene.lights)
                     {
-                        std::tie(radiance, ls) = light.sample(&si);
 
-                        Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
-                        Interaction siShadow = this->scene.rayIntersect(shadowRay);
-
-                        if (!siShadow.didIntersect || siShadow.t > ls.d)
+                        for (int i = 0; i < NUM_SAMPLES; i++)
                         {
-                            color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
-                            Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
-                            if (siEmitter.didIntersect)
+                            std::tie(radiance, ls) = light.sample(&si);
+                            Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
+                            Interaction siShadow = this->scene.rayIntersect(shadowRay);
+                            if (!siShadow.didIntersect || siShadow.t > ls.d)
                             {
-                                color += siEmitter.emissiveColor;
+                                if (light.getType() == AREA_LIGHT)
+                                {
+                                    if (Dot(light.normal, -1 * shadowRay.d) < 0)
+                                    {
+                                        int x = 0;
+                                    }
+                                    else
+                                    {
+
+                                        auto cos_theta_l = Dot(Normalize(light.normal), Normalize(siShadow.n));
+                                        auto area = 4 * light.getVx().Length() * light.getVy().Length();
+                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo)) * cos_theta_l * area;
+                                    }
+                                }
+
+                                Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                                if (siEmitter.didIntersect)
+                                {
+                                    color += siEmitter.emissiveColor;
+                                }
                             }
                         }
+
+                        // std::tie(radiance, ls) = light.sample(&si);
+
+                        // Ray shadowRay(si.p + 1e-3f * si.n, ls.wo);
+                        // Interaction siShadow = this->scene.rayIntersect(shadowRay);
+
+                        // if (!siShadow.didIntersect || siShadow.t > ls.d)
+                        // {
+                        //     color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * std::abs(Dot(si.n, ls.wo));
+                        //     Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                        //     if (siEmitter.didIntersect)
+                        //     {
+                        //         color += siEmitter.emissiveColor;
+                        //     }
+                        // }
                     }
                     result += color;
                 }
             }
-
-            result /= numSamples;
+            result /= NUM_SAMPLES;
+            result /= spp;
             this->outputImage.writePixelColor(result, x, y);
         }
     }
