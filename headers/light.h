@@ -53,16 +53,11 @@ public:
      */
     Interaction intersectLight(Ray *ray);
 
-    bool isAreaLight(Ray shadowRay)
-    {
-        return (type == AREA_LIGHT && Dot(normal, -1 * shadowRay.d) > 0);
-    }
-
     Vector3f normal;
 
-private:
     LightType type;
 
+private:
     // Applicable only for point lights.
     Vector3f position;
 
