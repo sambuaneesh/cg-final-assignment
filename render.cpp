@@ -30,6 +30,7 @@ long long Integrator::render(int spp, int samplingStrategy)
                         LightSample ls;
                         for (Light &light : this->scene.lights)
                         {
+                            si.samplingStrategy = 2;
                             std::tie(radiance, ls) = light.sample(&si);
                             Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
                             Interaction siShadow = this->scene.rayIntersect(shadowRay);
@@ -52,6 +53,37 @@ long long Integrator::render(int spp, int samplingStrategy)
                     }
                     break;
 
+                case 0:
+                    if (si.didIntersect)
+                    {
+                        Vector3f color = Vector3f(0, 0, 0);
+                        Vector3f radiance;
+                        LightSample ls;
+                        for (Light &light : this->scene.lights)
+                        {
+                            si.samplingStrategy = 0;
+                            std::tie(radiance, ls) = light.sample(&si);
+                            Ray shadowRay(si.p + 1e-5f * si.n, ls.wo);
+                            Interaction siShadow = this->scene.rayIntersect(shadowRay);
+
+                            Ray lightRay(si.p + 1e-3f * si.n, (ls.wo));
+                            Interaction siLight = this->scene.rayEmitterIntersect(lightRay);
+
+                            if (siLight.didIntersect && (!siShadow.didIntersect || siShadow.t > siLight.t) && Dot(lightRay.d, light.normal) <= 0)
+                            {
+                                color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo))) / this->scene.lights.size();
+                            }
+                            Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
+                            if (siEmitter.didIntersect)
+                            {
+                                color += siEmitter.emissiveColor;
+                            }
+                        }
+
+                        result += color;
+                    }
+                    break;
+
                 case 1:
                     if (si.didIntersect)
                     {
@@ -68,27 +100,9 @@ long long Integrator::render(int spp, int samplingStrategy)
                             Ray lightRay(si.p + 1e-3f * si.n, (ls.wo));
                             Interaction siLight = this->scene.rayEmitterIntersect(lightRay);
 
-                            // if (!siShadow.didIntersect || siShadow.t > ls.d)
-                            // {
-                            //     if (light.isAreaLight(shadowRay))
-                            //     {
-                            //         result += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo)));
-                            //     }
-
-                            //     if (siLight.didIntersect)
-                            //     {
-                            //         color += siLight.emissiveColor;
-                            //     }
-                            // }
-                            if (siLight.didIntersect)
+                            if (siLight.didIntersect && (!siShadow.didIntersect || siShadow.t > siLight.t) && Dot(lightRay.d, light.normal) <= 0)
                             {
-                                if (!siShadow.didIntersect || siShadow.t > siLight.t)
-                                {
-                                    if (Dot(ls.p, si.n) <= 0)
-                                    {
-                                        color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance * (AbsDot(si.n, (ls.wo))) / this->scene.lights.size();
-                                    }
-                                }
+                                color += si.bsdf->eval(&si, si.toLocal(ls.wo)) * radiance / this->scene.lights.size();
                             }
                             Interaction siEmitter = this->scene.rayEmitterIntersect(cameraRay);
                             if (siEmitter.didIntersect)
@@ -96,8 +110,11 @@ long long Integrator::render(int spp, int samplingStrategy)
                                 color += siEmitter.emissiveColor;
                             }
                         }
+
                         result += color;
                     }
+                    break;
+
                 default:
                     break;
                 }

@@ -45,7 +45,7 @@ std::pair<Vector3f, LightSample> Light::sample(Interaction *si)
         radiance = this->radiance;
         break;
     case LightType::AREA_LIGHT:
-        if (si->samplingStrategy == 1)
+        if (si->samplingStrategy == 0)
         {
             float u1 = next_float();
             float u2 = next_float();
@@ -57,9 +57,45 @@ std::pair<Vector3f, LightSample> Light::sample(Interaction *si)
             float y = r * std::sin(phi);
             float z = u1;
 
-            ls.wo = Vector3f(x, y, z);
+            // ls.wo = Vector3f(x, y, z);
+            ls.wo = si->toWorld(Vector3f(x, y, z));
+            // distance between the point on the light source and the point of intersection
             ls.d = 1e10;
             radiance = this->radiance * M_PI * 2;
+        }
+        else if (si->samplingStrategy == 1)
+        {
+            // float u1 = next_float();
+            // float u2 = next_float();
+
+            // float phi = 2 * M_PI * u1;
+            // // float cos_theta = std::sqrt(1.0f - u2);
+            // // float sin_theta = std::sqrt(u2);
+            // float cos_theta = std::sqrt(u2);
+            // float sin_theta = std::sqrt(1.0f - cos_theta * cos_theta);
+
+            // float x = cos(phi) * sin_theta;
+            // float y = sin(phi) * sin_theta;
+            // float z = cos_theta;
+
+            // ls.wo = Normalize(Vector3f(x, y, z));
+            // ls.d = 1e10;
+            // radiance = this->radiance * 2 * M_PI; // Assuming the area light emits uniformly over its surface
+
+            float u1 = next_float();
+            float u2 = next_float();
+
+            float phi = 2 * M_PI * u1;
+            float cos_theta = std::sqrt(1.0f - u2);
+            float sin_theta = std::sqrt(u2);
+
+            float x = cos(phi) * sin_theta;
+            float y = sin(phi) * sin_theta;
+            float z = cos_theta;
+
+            ls.wo = si->toWorld(Vector3f(x, y, z));
+            ls.d = 1e10;
+            radiance = this->radiance * M_PI;
         }
         else
         {
