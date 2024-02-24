@@ -421,7 +421,6 @@ void Surface::intersectBVH(uint32_t nodeIdx, Ray &ray, Interaction &si)
                 si.c = normal;
 
                 // Set the view direction in local coordinates
-                // TODO: Uncomment this after implementing ONB
                 si.wi = si.toLocal(-ray.d);
             }
         }
